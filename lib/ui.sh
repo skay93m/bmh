@@ -65,17 +65,12 @@ render_cards() {
       to_entries[] |
       .key as $idx |
       .value as $item |
-      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-      "  📌 [\( $idx + 1 )/\( $total )] " + ($item.title // $item.name // "Untitled Note") + "\n" +
-      "───────────────────────────────────────────────────────────────────────────────\n" +
-      (($item.content // $item.body // $item.description // "(No content)") | tostring) + "\n" +
-      "───────────────────────────────────────────────────────────────────────────────\n" +
-      (if $item.external_id then "  🆔 External ID: " + ($item.external_id | tostring) + "\n" else "" end) +
-      (if $item.entity then      "  🔗 Entity:      " + ($item.entity | tostring) + "\n" else "" end) +
-      (if $item.type then        "  🏷️  Type:        " + ($item.type | tostring) + "\n" else "" end) +
-      (if $item.file_path then   "  📁 File:        " + ($item.file_path | tostring) + "\n" else "" end) +
-      (if $item.updated_at then  "  🕒 Updated:     " + (format_date($item.updated_at) | tostring) + "\n" else "" end) +
-      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+      "╭─ " + ($item.title // $item.name // "Untitled Note") + " " + (if $total > 1 then "[\($idx+1)/\($total)] " else "" end) + "──────────────────────────────────────────\n\n" +
+      (($item.content // $item.body // $item.description // "(No content)") | tostring) + "\n\n" +
+      "├──────────────────────────────────────────────────────────────────────────\n" +
+      (if $item.entity then "│ entity:      " + ($item.entity | tostring) + "\n" else "" end) +
+      (if $item.external_id then "│ external_id: " + ($item.external_id | tostring) + "\n" else "" end) +
+      "╰──────────────────────────────────────────────────────────────────────────\n"
     end
   '
 }
