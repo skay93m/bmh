@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 # Resolve symlink to locate the real BMH_DIR
 SOURCE="${BASH_SOURCE[0]}"
@@ -27,6 +27,7 @@ bmh - Basic Memory Helper (v${VERSION})
 
 Usage:
   bmh                     Launch the interactive Basic Memory session
+  bmh update              Pull and apply the latest updates from GitHub
   <command> | bmh         Format piped JSON output as cards
 
 Description:
@@ -39,6 +40,24 @@ EOF
 
 show_version() {
   echo "bmh version ${VERSION}"
+}
+
+# -----------------------------------------------------------------------------
+# Self-Update Function
+# -----------------------------------------------------------------------------
+update_bmh() {
+  echo -e "\n${BOLD}${CYAN}── 🔄 Updating bmh ──${RESET}" >&2
+  if [[ ! -d "$BMH_DIR/.git" ]]; then
+    echo -e "${YELLOW}Warning: $BMH_DIR is not a git repository. Cannot update automatically.${RESET}" >&2
+    return 1
+  fi
+
+  echo -e "${DIM}Pulling latest changes from origin main...${RESET}" >&2
+  if git -C "$BMH_DIR" pull --ff-only; then
+    echo -e "\n${GREEN}✨ bmh is now up to date!${RESET}\n" >&2
+  else
+    echo -e "\n${YELLOW}Could not update cleanly. Please inspect git status in $BMH_DIR.${RESET}\n" >&2
+  fi
 }
 
 # -----------------------------------------------------------------------------
@@ -140,6 +159,7 @@ main_session() {
     echo -e "  [2] ⚡ View active tasks ${DIM}(current commitments)${RESET}" >&2
     echo -e "  [3] 📚 Browse by project ${DIM}(kancil / kensho)${RESET}" >&2
     echo -e "  [4] 🕒 View recent notes" >&2
+    echo -e "  [5] 🔄 Update bmh ${DIM}(pull latest from GitHub)${RESET}" >&2
     echo -e "  [0] 🚪 Exit" >&2
     echo -e "──────────────────────────────────────────────" >&2
 
@@ -158,6 +178,9 @@ main_session() {
         ;;
       4|recent)
         flow_recent_notes
+        ;;
+      5|update)
+        update_bmh
         ;;
       0|q|quit|exit)
         echo -e "\n${DIM}Goodbye!${RESET}\n" >&2
@@ -182,6 +205,10 @@ main_session() {
 # -----------------------------------------------------------------------------
 if [[ $# -gt 0 ]]; then
   case "$1" in
+    update|upgrade|--update)
+      update_bmh
+      exit 0
+      ;;
     -h|--help)
       show_help
       exit 0
