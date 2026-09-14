@@ -11,7 +11,7 @@ Instead of memorizing flags and parsing unformatted JSON, `bmh` provides a guide
 Run this one-liner in your terminal:
 
 ```bash
-git clone https://github.com/skay93m/bmh.git ~/.bmh && cd ~/.bmh && make install
+git clone https://github.com/skay93m/bmh.git ~/.bmh && cd ~/.bmh && ./install.sh
 ```
 
 > **Note**: Ensure `~/.local/bin` is in your `$PATH` (if not already):
