@@ -57,27 +57,25 @@ render_cards() {
         val
       end;
 
-    to_rows as $rows |
-    if ($rows | length) == 0 then
+    to_rows |
+    if length == 0 then
       "No notes found matching criteria.\n"
     else
-      ($rows | length) as $total |
-      (
-        to_entries[] |
-        .key as $idx |
-        .value as $item |
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-        "  📌 [\( $idx + 1 )/\( $total )] " + ($item.title // $item.name // "Untitled Note") + "\n" +
-        "───────────────────────────────────────────────────────────────────────────────\n" +
-        (($item.content // $item.body // $item.description // "(No content)") | tostring) + "\n" +
-        "───────────────────────────────────────────────────────────────────────────────\n" +
-        (if $item.external_id then "  🆔 External ID: " + ($item.external_id | tostring) + "\n" else "" end) +
-        (if $item.entity then      "  🔗 Entity:      " + ($item.entity | tostring) + "\n" else "" end) +
-        (if $item.type then        "  🏷️  Type:        " + ($item.type | tostring) + "\n" else "" end) +
-        (if $item.file_path then   "  📁 File:        " + ($item.file_path | tostring) + "\n" else "" end) +
-        (if $item.updated_at then  "  🕒 Updated:     " + (format_date($item.updated_at) | tostring) + "\n" else "" end) +
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-      )
+      length as $total |
+      to_entries[] |
+      .key as $idx |
+      .value as $item |
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+      "  📌 [\( $idx + 1 )/\( $total )] " + ($item.title // $item.name // "Untitled Note") + "\n" +
+      "───────────────────────────────────────────────────────────────────────────────\n" +
+      (($item.content // $item.body // $item.description // "(No content)") | tostring) + "\n" +
+      "───────────────────────────────────────────────────────────────────────────────\n" +
+      (if $item.external_id then "  🆔 External ID: " + ($item.external_id | tostring) + "\n" else "" end) +
+      (if $item.entity then      "  🔗 Entity:      " + ($item.entity | tostring) + "\n" else "" end) +
+      (if $item.type then        "  🏷️  Type:        " + ($item.type | tostring) + "\n" else "" end) +
+      (if $item.file_path then   "  📁 File:        " + ($item.file_path | tostring) + "\n" else "" end) +
+      (if $item.updated_at then  "  🕒 Updated:     " + (format_date($item.updated_at) | tostring) + "\n" else "" end) +
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     end
   '
 }
