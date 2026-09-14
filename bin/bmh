@@ -4,6 +4,7 @@
 set -euo pipefail
 
 VERSION="1.0.0"
+
 # Resolve symlink to locate the real BMH_DIR
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
@@ -25,30 +26,13 @@ show_help() {
 bmh - Basic Memory Helper (v${VERSION})
 
 Usage:
-  bmh [options] [query]
-  bmh search [query] [filters...]
-  bmh
-
-Options:
-  -h, --help            Show this help message and exit
-  -v, --version         Show version and exit
-  -t, --title <str>     Search specifically in note titles
-  -p, --project <str>   Filter by project (e.g. 'kancil', 'kensho')
-  --type <str>          Filter by note type (e.g. 'task', 'note', 'spec')
-  --status <str>        Filter by note status (e.g. 'active', 'done')
-  --tag <str>           Filter by tag
-  --json                Output raw JSON response from Basic Memory
+  bmh                     Launch the interactive Basic Memory session
+  <command> | bmh         Format piped JSON output as cards
 
 Description:
-  bmh is an interactive companion for Basic Memory. When run with no
-  arguments, it presents an intuitive search workflow and formats results
-  as structured cards (Header, Body, and Footer metadata).
-
-Examples:
-  bmh                                 # Interactive search wizard
-  bmh "Daily Token Spend"             # Direct keyword search rendered in cards
-  bmh --type task --status active     # Find active tasks across projects
-  bmh --project kancil --title kancil # Search title in specific project
+  bmh is a purely interactive companion for Basic Memory (bm).
+  It guides you through searching notes, discovering active tasks,
+  and browsing projects, then renders every note in clean, structured cards.
 
 EOF
 }
@@ -60,13 +44,12 @@ show_version() {
 # -----------------------------------------------------------------------------
 # Core Search Runner
 # -----------------------------------------------------------------------------
-run_bm_search() {
+execute_bm_search() {
   local query="${1:-}"
   local project="${2:-}"
   local note_type="${3:-}"
   local status="${4:-}"
   local is_title="${5:-false}"
-  local raw_json="${6:-false}"
 
   local bm_args=()
 
@@ -92,99 +75,112 @@ run_bm_search() {
 
   bm_args+=(--json)
 
+  echo -e "\n${CYAN}Searching Basic Memory...${RESET}\n" >&2
   local output
   output=$(bm tool search-notes "${bm_args[@]}")
 
-  if [[ "$raw_json" == "true" ]]; then
-    echo "$output"
-  else
-    render_cards "$output"
-  fi
+  render_cards "$output"
 }
 
 # -----------------------------------------------------------------------------
-# Interactive Mode
+# Interactive Flows
 # -----------------------------------------------------------------------------
-interactive_search() {
+flow_search_notes() {
+  echo -e "\n${BOLD}${CYAN}── 🔍 Search Notes ──${RESET}" >&2
+  read -rp "Enter search query (or press Enter for all): " query < /dev/tty
+
+  local is_title=false
+  if [[ -n "$query" ]]; then
+    read -rp "Search in title only? (y/N) [n]: " title_only < /dev/tty
+    [[ "$title_only" =~ ^[Yy] ]] && is_title=true
+  fi
+
+  read -rp "Project filter ('kancil', 'kensho', or leave empty for all) []: " project < /dev/tty
+
+  execute_bm_search "$query" "$project" "" "" "$is_title"
+}
+
+flow_active_tasks() {
+  echo -e "\n${BOLD}${YELLOW}── ⚡ Active Tasks ──${RESET}" >&2
+  read -rp "Project filter ('kancil', 'kensho', or leave empty for all) []: " project < /dev/tty
+
+  execute_bm_search "" "$project" "task" "active" false
+}
+
+flow_browse_project() {
+  echo -e "\n${BOLD}${BLUE}── 📚 Browse by Project ──${RESET}" >&2
+  echo -e "  [1] kancil ${DIM}(operational life & agent tasks)${RESET}" >&2
+  echo -e "  [2] kensho ${DIM}(durable knowledge base)${RESET}" >&2
+  read -rp "Select project [1]: " proj_choice < /dev/tty
+
+  local project="kancil"
+  if [[ "$proj_choice" == "2" || "$proj_choice" == "kensho" ]]; then
+    project="kensho"
+  fi
+
+  read -rp "Search query within $project (optional): " query < /dev/tty
+  execute_bm_search "$query" "$project" "" "" false
+}
+
+flow_recent_notes() {
+  echo -e "\n${BOLD}${MAGENTA}── 🕒 Recent Notes ──${RESET}" >&2
+  read -rp "Project filter ('kancil', 'kensho', or leave empty for all) []: " project < /dev/tty
+  execute_bm_search "" "$project" "" "" false
+}
+
+# -----------------------------------------------------------------------------
+# Main Interactive Loop
+# -----------------------------------------------------------------------------
+main_session() {
   render_banner
 
-  echo -e "\n${BOLD}What would you like to find?${RESET}" >&2
-  echo -e "  [1] 🔍 Search notes (keyword or title) ${DIM}[Default]${RESET}" >&2
-  echo -e "  [2] ⚡ Active Tasks (--type task --status active)" >&2
-  echo -e "  [3] 📚 Browse notes by Project (kancil, kensho)" >&2
-  echo -e "  [4] 🏷️  Custom filter (type, status, tag)" >&2
-  echo -e "──────────────────────────────────────────────" >&2
+  while true; do
+    echo -e "\n${BOLD}What would you like to do?${RESET}" >&2
+    echo -e "  [1] 🔍 Search notes ${DIM}(by title or content)${RESET}" >&2
+    echo -e "  [2] ⚡ View active tasks ${DIM}(current commitments)${RESET}" >&2
+    echo -e "  [3] 📚 Browse by project ${DIM}(kancil / kensho)${RESET}" >&2
+    echo -e "  [4] 🕒 View recent notes" >&2
+    echo -e "  [0] 🚪 Exit" >&2
+    echo -e "──────────────────────────────────────────────" >&2
 
-  read -rp "Select option [1]: " opt_choice < /dev/tty
-  opt_choice="${opt_choice:-1}"
+    read -rp "Select an option [1]: " choice < /dev/tty
+    choice="${choice:-1}"
 
-  local query=""
-  local project=""
-  local note_type=""
-  local status=""
-  local is_title=false
+    case "$choice" in
+      1|search)
+        flow_search_notes
+        ;;
+      2|tasks|task)
+        flow_active_tasks
+        ;;
+      3|project)
+        flow_browse_project
+        ;;
+      4|recent)
+        flow_recent_notes
+        ;;
+      0|q|quit|exit)
+        echo -e "\n${DIM}Goodbye!${RESET}\n" >&2
+        break
+        ;;
+      *)
+        echo -e "${YELLOW}Invalid option '$choice'. Please select from the menu.${RESET}" >&2
+        ;;
+    esac
 
-  case "$opt_choice" in
-    2)
-      note_type="task"
-      status="active"
-      read -rp "Project filter (leave blank for all, or 'kancil'/'kensho'): " project < /dev/tty
-      ;;
-    3)
-      echo -e "\nSelect project:" >&2
-      echo -e "  [1] kancil (operational life & agent tasks)" >&2
-      echo -e "  [2] kensho (durable knowledge base)" >&2
-      read -rp "Project [1]: " proj_choice < /dev/tty
-      if [[ "$proj_choice" == "2" || "$proj_choice" == "kensho" ]]; then
-        project="kensho"
-      else
-        project="kancil"
-      fi
-      read -rp "Search term within $project (optional): " query < /dev/tty
-      ;;
-    4)
-      read -rp "Search query (optional): " query < /dev/tty
-      read -rp "Type filter (e.g. task, note, spec, observation): " note_type < /dev/tty
-      read -rp "Status filter (e.g. active, done, backlog): " status < /dev/tty
-      read -rp "Project (e.g. kancil, kensho): " project < /dev/tty
-      ;;
-    1|*)
-      read -rp "Enter search query: " query < /dev/tty
-      if [[ -z "$query" ]]; then
-        echo "No search query entered. Searching recent notes..." >&2
-      fi
-      read -rp "Match in title only? (y/N): " title_only < /dev/tty
-      [[ "$title_only" =~ ^[Yy] ]] && is_title=true
-      read -rp "Project filter (leave blank for all, or 'kancil'/'kensho'): " project < /dev/tty
-      ;;
-  esac
-
-  echo -e "\n${CYAN}Searching Basic Memory...${RESET}\n" >&2
-  run_bm_search "$query" "$project" "$note_type" "$status" "$is_title" false
+    echo -e "\n${DIM}──────────────────────────────────────────────${RESET}" >&2
+    read -rp "Press Enter to return to main menu (or 'q' to quit): " cont < /dev/tty
+    if [[ "$cont" =~ ^[Qq] ]]; then
+      echo -e "\n${DIM}Goodbye!${RESET}\n" >&2
+      break
+    fi
+  done
 }
 
 # -----------------------------------------------------------------------------
-# CLI Arguments Dispatcher
+# Entrypoint
 # -----------------------------------------------------------------------------
-if [[ $# -eq 0 ]]; then
-  if [[ ! -t 0 ]]; then
-    # Piped input: format whatever json came in
-    input_data=$(cat)
-    render_cards "$input_data"
-  else
-    interactive_search
-  fi
-  exit 0
-fi
-
-query=""
-project=""
-note_type=""
-status=""
-is_title=false
-raw_json=false
-
-while [[ $# -gt 0 ]]; do
+if [[ $# -gt 0 ]]; then
   case "$1" in
     -h|--help)
       show_help
@@ -194,51 +190,17 @@ while [[ $# -gt 0 ]]; do
       show_version
       exit 0
       ;;
-    search)
-      # Skip sub-command keyword if provided
-      shift
-      ;;
-    -t|--title)
-      is_title=true
-      shift
-      if [[ $# -gt 0 && ! "$1" =~ ^- ]]; then
-        query="$1"
-        shift
-      fi
-      ;;
-    -p|--project)
-      shift
-      project="$1"
-      shift
-      ;;
-    --type)
-      shift
-      note_type="$1"
-      shift
-      ;;
-    --status)
-      shift
-      status="$1"
-      shift
-      ;;
-    --json)
-      raw_json=true
-      shift
-      ;;
-    -*)
-      echo "Error: Unknown option '$1'" >&2
-      echo "Run 'bmh --help' for usage." >&2
-      exit 1
-      ;;
     *)
-      if [[ -z "$query" ]]; then
-        query="$1"
-      else
-        query="$query $1"
-      fi
-      shift
+      show_help
+      exit 0
       ;;
   esac
-done
+fi
 
-run_bm_search "$query" "$project" "$note_type" "$status" "$is_title" "$raw_json"
+if [[ ! -t 0 ]]; then
+  # Piped input: format json stream directly as cards
+  input_data=$(cat)
+  render_cards "$input_data"
+else
+  main_session
+fi

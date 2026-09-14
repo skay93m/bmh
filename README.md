@@ -1,10 +1,8 @@
 # bmh (Basic Memory Helper)
 
-An interactive, user-story-driven companion for **Basic Memory** (`bm`).
+A purely interactive companion for **Basic Memory** (`bm`).
 
-`bmh` streamlines Basic Memory workflows:
-1. **Fixes Inputs**: Interactive prompts and clean queries (no memorizing verbose CLI flags).
-2. **Fixes Outputs**: Formats notes into readable, structured cards (Header, Body, and Footer metadata).
+Instead of memorizing flags, `bmh` provides a guided walkthrough for searching and exploring your knowledge base, formatting every result in clean, structured cards.
 
 ---
 
@@ -15,36 +13,36 @@ cd ~/.bmh
 make install
 ```
 
-This symlinks `~/.bmh/bin/bmh` to `~/.local/bin/bmh`. Any edits in `~/.bmh` take effect immediately.
+Symlinks `~/.bmh/bin/bmh` to `~/.local/bin/bmh`.
 
 ---
 
 ## Usage
 
-### 1. Interactive Mode (Default)
 Simply run:
 ```bash
 bmh
 ```
-This launches the interactive search wizard:
-- 🔍 Search notes (by keyword or title)
-- ⚡ Active Tasks (`--type task --status active`)
-- 📚 Browse by Project (`kancil`, `kensho`)
-- 🏷️ Custom filters
 
-### 2. Direct CLI Commands
+`bmh` will launch an interactive session:
+```text
+╭────────────────────────────────────────────────╮
+│  🧠 Basic Memory Helper (bmh)                  │
+│  Smart discovery & structured card inspector   │
+╰────────────────────────────────────────────────╯
+
+What would you like to do?
+  [1] 🔍 Search notes (by title or content)
+  [2] ⚡ View active tasks (current commitments)
+  [3] 📚 Browse by project (kancil / kensho)
+  [4] 🕒 View recent notes
+  [0] 🚪 Exit
+```
+
+### Piped Card Formatter
+You can also pipe any Basic Memory JSON query directly into `bmh`:
 ```bash
-# Keyword search
-bmh "Daily Token Spend"
-
-# Search in note titles
-bmh --title "kancil"
-
-# Filter active tasks in project kancil
-bmh --project kancil --type task --status active
-
-# Pipe from other tools / bm
-bm tool search-notes --title "kancil" --json | bmh
+bm tool search-notes --type task --json | bmh
 ```
 
 ---
