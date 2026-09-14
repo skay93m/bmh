@@ -6,15 +6,53 @@ Instead of memorizing flags and parsing unformatted JSON, `bmh` provides a guide
 
 ---
 
-## 🚀 Quick Install (Any Mac / Linux)
+## 🚀 Installation
 
-Run this one-liner in your terminal:
+`bmh` automatically detects whether your system is **Apple Silicon (`arm64`)**, **Intel (`x86_64`)**, or **Linux**.
 
-```bash
-git clone https://github.com/skay93m/bmh.git ~/.bmh && cd ~/.bmh && ./install.sh
-```
+### 🍏 Apple Silicon Macs (M1 / M2 / M3 / M4)
 
-> **Note**: Ensure `~/.local/bin` is in your `$PATH` (if not already):
+1. **Install Prerequisites**:
+   ```bash
+   brew install jq
+   ```
+2. **Clone & Install**:
+   ```bash
+   git clone https://github.com/skay93m/bmh.git ~/.bmh && cd ~/.bmh && ./install.sh
+   ```
+
+---
+
+### 🖥️ Intel Macs (x86_64)
+
+1. **Install Prerequisites**:
+   ```bash
+   brew install jq
+   # Or via Nix: nix-env -iA nixpkgs.jq
+   ```
+2. **Clone & Install**:
+   ```bash
+   git clone https://github.com/skay93m/bmh.git ~/.bmh && cd ~/.bmh && ./install.sh
+   ```
+
+---
+
+### 🐧 Linux
+
+1. **Install Prerequisites**:
+   ```bash
+   sudo apt-get install jq    # Debian/Ubuntu
+   # sudo pacman -S jq        # Arch
+   # sudo dnf install jq      # Fedora
+   ```
+2. **Clone & Install**:
+   ```bash
+   git clone https://github.com/skay93m/bmh.git ~/.bmh && cd ~/.bmh && ./install.sh
+   ```
+
+---
+
+> 💡 **PATH Setup**: Ensure `~/.local/bin` is in your `$PATH` (if not already):
 > ```bash
 > echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 > source ~/.zshrc
