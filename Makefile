@@ -1,19 +1,20 @@
-.PHONY: install test commit help
+.PHONY: install dev test commit help
 
 install:
-	@./install.sh
+	@uv tool install . --force
 
-help:
-	@bin/bmh --help
+dev:
+	@uv pip install -e ".[dev]"
 
 test:
-	@bash -n bin/bmh
-	@bash -n lib/ui.sh
-	@echo "All shell syntax checks passed."
+	@pytest --cov=bmh --cov-report=term-missing
+
+help:
+	@bmh --help
 
 commit:
 	@echo "--- Conventional Commit Wizard ---"
-	@echo "Types: feat, fix, docs, style, refactor, perf, test, chore, bump"
+	@echo "Types: feat, fix, docs, style, refactor, perf, test, chore"
 	@read -p "Type: " type; \
 	read -p "Scope (optional): " scope; \
 	read -p "Short description: " desc; \
