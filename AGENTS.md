@@ -7,10 +7,10 @@ This document bootstraps any AI coding assistant (Antigravity, Claude, Codex, Ge
 ## 1. Project Mission & Identity
 
 - **Name**: `bmh` (Basic Memory Helper)
-- **Role**: A purely interactive CLI companion for **Basic Memory** (`bm`).
+- **Role**: A purely interactive CLI companion and structured card inspector for **Basic Memory** (`bm`).
 - **Core Philosophy**:
   1. **Fix Inputs**: Guide the user step-by-step through interactive user stories. Users should NEVER need to memorize verbose CLI flags.
-  2. **Fix Outputs**: Present notes as clean, structured **Cards** (Header: title/index, Body: markdown/observations/steps, Footer: ID/entity/file/timestamp) without context pollution.
+  2. **Fix Outputs**: Present notes as clean, structured **Cards** (Header: title/index, Body: markdown/observations/steps, Footer: entity/external_id) without context pollution.
   3. **Zero-Pollution**: Keep outputs dense, high-signal, and formatted.
 
 ---
@@ -45,27 +45,44 @@ All commits MUST adhere to Conventional Commits:
 ├── AGENTS.md            # This agent onboarding guide
 ├── CONTRIBUTING.md      # Developer guidelines & contribution flow
 ├── .cz.json             # Commitizen configuration
-├── Makefile             # 'make install', 'make test', 'make commit'
-├── install.sh           # Symlinker to ~/.local/bin/bmh
-├── bin/
-│   └── bmh              # Main executable entrypoint (100% interactive walkthrough)
-└── lib/
-    ├── ui.sh            # Terminal styling, banners, and Card renderer (jq)
-    └── bm.sh            # Basic Memory wrapper utilities (future expansion)
+├── Makefile             # 'make install', 'make test', 'make dev'
+├── pyproject.toml       # Python project configuration (hatchling build-backend)
+├── src/
+│   └── bmh/
+│       ├── __init__.py
+│       ├── main.py              # Pure interactive entrypoint + Stdin pipe + update
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── client.py        # bm CLI subprocess client & path discovery
+│       │   └── models.py        # Pydantic Note, Task, SearchResult schemas & normalizers
+│       ├── ui/
+│       │   ├── __init__.py
+│       │   ├── banner.py        # Rich ASCII / box header banners
+│       │   ├── cards.py         # Rich Panel card renderer with Markdown & badges
+│       │   └── menu.py          # Interactive prompt flows (search, tasks, projects, recent)
+│       └── updater/
+│           ├── __init__.py
+│           └── engine.py        # Multi-environment updater (uv tool, pipx, git)
+└── tests/
+    ├── test_banner.py
+    ├── test_cards.py
+    ├── test_client.py
+    ├── test_main.py
+    ├── test_menu.py
+    ├── test_models.py
+    └── test_updater.py
 ```
 
 ---
 
 ## 5. UI & Card Formatting Invariants
 
-When rendering notes in `lib/ui.sh`:
+When rendering notes in `bmh.ui.cards`:
 - Cards MUST contain:
-  1. **Header**: `📌 [Index/Total] Note Title`
-  2. **Separator**: ASCII or Box-drawing line (`───`)
-  3. **Body**: Markdown content / observations / steps
-  4. **Separator**: ASCII or Box-drawing line (`───`)
-  5. **Footer**: External ID, Entity permalink, Type, File path, formatted Timestamp (`DD/MM/YY HH:MM`)
-- Handle raw JSON arrays, wrapper objects (`.results`), and single objects cleanly using `to_rows` normalization in `jq`.
+  1. **Header**: `📌 Note Title [Index/Total]`
+  2. **Body**: Formatted Markdown content with highlighted badges (`[decision]`, `[insight]`, `[risk]`, `[todo]`, `[status]`) and checkboxes (`☑`, `☐`)
+  3. **Footer/Subtitle**: `entity: <permalink>` and `external_id: <uuid>`
+- Handle raw JSON arrays, wrapper objects (`.results`, `.items`), and single objects cleanly using `normalize_notes_json`.
 
 ---
 
@@ -73,15 +90,15 @@ When rendering notes in `lib/ui.sh`:
 
 Before submitting changes:
 ```bash
-# 1. Run syntax verification
+# 1. Run unit test suite with coverage
 make test
 
 # 2. Test interactive launch locally
-bin/bmh --help
-bin/bmh -v
+uv run bmh --help
+uv run bmh -v
 
 # 3. Test piped execution with real bm notes
-bm tool search-notes --type task --json | bin/bmh
+bm tool search-notes --type task --json | uv run bmh
 ```
 
 ---
@@ -89,7 +106,7 @@ bm tool search-notes --type task --json | bin/bmh
 ## 7. Version Bumping & Releases
 
 When releasing a new version:
-1. Update `VERSION="x.y.z"` in `bin/bmh`.
+1. Update `version = "x.y.z"` in `pyproject.toml` and `__version__` in `src/bmh/__init__.py`.
 2. Update version references in documentation.
 3. Merge `develop` into `main`.
 4. Create an annotated git tag: `git tag -a vx.y.z -m "Release vx.y.z"`.
