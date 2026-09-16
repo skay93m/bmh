@@ -16,7 +16,7 @@ console = Console()
 app = typer.Typer(
     no_args_is_help=False,
     add_completion=False,
-    help="bmh - Purely interactive CLI companion and structured card inspector for Basic Memory (bm)",
+    help="bmh — Purely interactive CLI companion and structured card inspector for Basic Memory (bm)",
 )
 
 
@@ -40,8 +40,8 @@ def main(
 ) -> None:
     """bmh is a purely interactive companion for Basic Memory (bm).
 
-    It guides you through searching notes, discovering active tasks,
-    and browsing projects, then renders every note in clean, structured cards.
+    Run bare to enter the interactive Tri-Modal menu (Ingest, Query, Lint).
+    Pipe JSON into bmh to format it into structured Rich cards.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -56,7 +56,7 @@ def main(
             console.print("\n[yellow]No input provided on stdin.[/yellow]\n")
         return
 
-    # Default interactive session for human developers
+    # Default: interactive Tri-Modal session
     run_interactive_session()
 
 
