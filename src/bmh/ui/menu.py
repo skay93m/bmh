@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import sys
 from typing import Optional
+
 from rich.console import Console
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Prompt
 
 from bmh.core.client import BMClient, BMError, BMNotFoundError
 from bmh.ui.banner import render_banner
 from bmh.ui.cards import render_note_cards
+from bmh.workflows.ingest import run_ingest_hub
+from bmh.workflows.query import run_query_hub
+from bmh.workflows.lint import run_lint_hub
+from bmh.updater.engine import run_self_update
 
 console = Console()
 
@@ -26,138 +31,72 @@ def _handle_client_error(e: Exception) -> None:
         console.print(f"\n[bold red]Unexpected Error:[/bold red] {e}\n")
 
 
-def flow_search_notes(client: BMClient) -> None:
-    """Interactive flow: search notes by query, title, or project."""
-    console.print("\n[bold cyan]── 🔍 Search Notes ──[/bold cyan]")
-    query = Prompt.ask("Enter search query (or press Enter for all)", default="").strip()
-
-    is_title = False
-    if query:
-        is_title = Confirm.ask("Search in title only?", default=False)
-
-    project = Prompt.ask(
-        "Project filter ('kancil', 'kensho', or leave empty for all)", default=""
-    ).strip()
-
-    console.print("\n[cyan]Searching Basic Memory...[/cyan]")
-    try:
-        notes = client.search_notes(
-            query=query or None,
-            project=project or None,
-            is_title=is_title,
-        )
-        render_note_cards(notes)
-    except Exception as e:
-        _handle_client_error(e)
-
-
-def flow_active_tasks(client: BMClient) -> None:
-    """Interactive flow: discover active tasks."""
-    console.print("\n[bold yellow]── ⚡ Active Tasks ──[/bold yellow]")
-    project = Prompt.ask(
-        "Project filter ('kancil', 'kensho', or leave empty for all)", default=""
-    ).strip()
-
-    console.print("\n[cyan]Retrieving active tasks...[/cyan]")
-    try:
-        notes = client.search_notes(
-            query=None,
-            project=project or None,
-            note_type="task",
-            status="active",
-        )
-        render_note_cards(notes)
-    except Exception as e:
-        _handle_client_error(e)
-
-
-def flow_browse_project(client: BMClient) -> None:
-    """Interactive flow: browse by project knowledge base."""
-    console.print("\n[bold blue]── 📚 Browse by Project ──[/bold blue]")
-    console.print("  [cyan][1][/cyan] kancil [dim](operational life & agent tasks)[/dim]")
-    console.print("  [cyan][2][/cyan] kensho [dim](durable knowledge base)[/dim]")
-
-    choice = Prompt.ask("Select project", choices=["1", "2", "kancil", "kensho"], default="1")
-    project = "kensho" if choice in ("2", "kensho") else "kancil"
-
-    query = Prompt.ask(f"Search query within [bold]{project}[/bold] (optional)", default="").strip()
-
-    console.print(f"\n[cyan]Browsing project '{project}'...[/cyan]")
-    try:
-        notes = client.search_notes(
-            query=query or None,
-            project=project,
-        )
-        render_note_cards(notes)
-    except Exception as e:
-        _handle_client_error(e)
-
-
-def flow_recent_notes(client: BMClient) -> None:
-    """Interactive flow: view recent notes."""
-    console.print("\n[bold magenta]── 🕒 Recent Notes ──[/bold magenta]")
-    project = Prompt.ask(
-        "Project filter ('kancil', 'kensho', or leave empty for all)", default=""
-    ).strip()
-
-    console.print("\n[cyan]Fetching recent notes...[/cyan]")
-    try:
-        notes = client.search_notes(
-            query=None,
-            project=project or None,
-        )
-        render_note_cards(notes)
-    except Exception as e:
-        _handle_client_error(e)
-
 
 def run_interactive_session(client: Optional[BMClient] = None) -> None:
-    """Main interactive terminal session loop."""
+    """Main Tri-Modal interactive terminal session loop."""
     bm_client = client or BMClient()
     render_banner()
 
+
     while True:
-        console.print("\n[bold]What would you like to do?[/bold]")
-        console.print("  [bold cyan][1][/bold cyan] 🔍 Search notes [dim](by title or content)[/dim]")
-        console.print("  [bold cyan][2][/bold cyan] ⚡ View active tasks [dim](current commitments)[/dim]")
-        console.print("  [bold cyan][3][/bold cyan] 📚 Browse by project [dim](kancil / kensho)[/dim]")
-        console.print("  [bold cyan][4][/bold cyan] 🕒 View recent notes")
-        console.print("  [bold cyan][5][/bold cyan] 🔄 Update bmh [dim](pull latest release)[/dim]")
+        console.print("\n[bold]Select an operational mode:[/bold]")
+        console.print("  [bold cyan][1][/bold cyan] 📥 Ingest   [dim]— Capture notes, structured templates & observation appender[/dim]")
+        console.print("  [bold cyan][2][/bold cyan] 🔍 Query    [dim]— Search, active tasks, project browse & Guided Query Co-Pilot[/dim]")
+        console.print("  [bold cyan][3][/bold cyan] 🩺 Lint     [dim]— Schema validation, orphan links & knowledge health checkup[/dim]")
+        console.print("  [bold cyan][4][/bold cyan] 🔄 Update   [dim]— Pull and apply latest updates[/dim]")
         console.print("  [bold cyan][0][/bold cyan] 🚪 Exit")
         console.print("[dim]──────────────────────────────────────────────[/dim]")
 
         try:
             choice = Prompt.ask(
-                "Select an option",
-                choices=["1", "2", "3", "4", "5", "0", "search", "tasks", "task", "project", "recent", "update", "exit", "q", "quit"],
-                default="1",
+                "Select mode",
+                choices=["1", "2", "3", "4", "0", "ingest", "query", "lint", "update", "exit", "q", "quit"],
+                default="2",
                 show_choices=False,
             ).strip().lower()
         except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Goodbye![/dim]\n")
             break
 
-        if choice in ("1", "search"):
-            flow_search_notes(bm_client)
-        elif choice in ("2", "tasks", "task"):
-            flow_active_tasks(bm_client)
-        elif choice in ("3", "project"):
-            flow_browse_project(bm_client)
-        elif choice in ("4", "recent"):
-            flow_recent_notes(bm_client)
-        elif choice in ("5", "update"):
-            from bmh.updater.engine import run_self_update
+        if choice in ("1", "ingest"):
+            run_ingest_hub(bm_client)
+        elif choice in ("2", "query"):
+            run_query_hub(bm_client)
+        elif choice in ("3", "lint"):
+            run_lint_hub(bm_client)
+        elif choice in ("4", "update"):
             run_self_update()
         elif choice in ("0", "exit", "q", "quit"):
             console.print("\n[dim]Goodbye![/dim]\n")
             break
 
-        console.print("\n[dim]──────────────────────────────────────────────[/dim]")
-        try:
-            cont = Prompt.ask("Press Enter to return to main menu (or 'q' to quit)", default="")
-            if cont.strip().lower() in ("q", "quit", "exit"):
-                console.print("\n[dim]Goodbye![/dim]\n")
-                break
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Goodbye![/dim]\n")
-            break
+
+# ── Backward-compatibility aliases ────────────────────────────────────────────
+# These names were used in the original pre-Tri-Modal menu.py.
+# They are preserved here so existing test code that imports from bmh.ui.menu
+# continues to work without modification.
+
+from bmh.workflows.query import (
+    flow_keyword_search as flow_search_notes,
+    flow_active_tasks,
+    flow_project_browser as flow_browse_project,
+    flow_recent_notes,
+    flow_note_reader,
+    flow_guided_query_copilot,
+)
+
+__all__ = [
+    "_handle_client_error",
+    "run_interactive_session",
+    "run_ingest_hub",
+    "run_query_hub",
+    "run_lint_hub",
+    "run_self_update",
+    # Compat aliases
+    "flow_search_notes",
+    "flow_active_tasks",
+    "flow_browse_project",
+    "flow_recent_notes",
+    "flow_note_reader",
+    "flow_guided_query_copilot",
+]
