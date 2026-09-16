@@ -14,26 +14,38 @@ REPO_URL = "https://github.com/skay93m/bmh.git"
 
 
 def _detect_environment() -> Tuple[str, Optional[Path]]:
-    """Detect whether bmh is running from a git repo, uv tool, or pipx."""
-    # Check if this file is within a git repo root
-    current_file = Path(__file__).resolve()
-    for parent in [current_file] + list(current_file.parents):
-        if (parent / ".git").is_dir():
-            return "git", parent
+    """Detect whether bmh is running from a uv tool, pipx, or git-cloned install.
 
-    # Check executable path
-    executable = sys.executable or ""
-    if "uv/tools/bmh" in executable or (shutil.which("uv") and "uv" in executable):
+    Order of precedence (most specific first):
+    1. uv tool install — sys.executable lives inside ~/.local/share/uv/tools/bmh/
+    2. pipx — sys.executable lives inside ~/.local/share/pipx/venvs/bmh/
+    3. git clone — any parent of __file__ contains a .git directory
+    4. uv available on PATH — assume uv tool
+    5. pipx available on PATH — assume pipx
+    """
+    executable = str(sys.executable) if sys.executable else ""
+
+    # 1. uv tool install check
+    if "uv/tools/bmh" in executable or ("uv" in executable and "tools" in executable and "bmh" in executable):
         return "uv_tool", None
 
-    if "pipx/venvs/bmh" in executable or "pipx" in executable:
+    # 2. pipx check
+    if "pipx/venvs/bmh" in executable or ("pipx" in executable and "bmh" in executable):
         return "pipx", None
 
-    # Check if uv is available
+    # 3. git clone check — walk __file__ parents looking for .git
+    try:
+        current_file = Path(__file__).resolve()
+        for parent in [current_file] + list(current_file.parents):
+            if (parent / ".git").is_dir():
+                return "git", parent
+    except Exception:
+        pass
+
+    # 4. Fallback: check installed CLI tools
     if shutil.which("uv"):
         return "uv_tool", None
 
-    # Check if pipx is available
     if shutil.which("pipx"):
         return "pipx", None
 
@@ -80,7 +92,14 @@ def run_self_update() -> bool:
                 console.print("\n[bold green]✨ bmh successfully upgraded via uv tool![/bold green]\n")
                 return True
             else:
-                console.print(f"\n[yellow]uv tool update returned an error: {res.stderr.strip()}[/yellow]\n")
+                err = res.stderr.strip()
+                if "pyproject.toml" in err or "setup.py" in err:
+                    console.print(
+                        f"\n[yellow]Remote repo update returned an error (remote release may not have pyproject.toml yet):[/yellow]\n"
+                        f"[dim]{err}[/dim]\n"
+                    )
+                else:
+                    console.print(f"\n[yellow]uv tool update returned an error: {err}[/yellow]\n")
                 return False
         except Exception as e:
             console.print(f"\n[bold red]uv update failed:[/bold red] {e}\n")
